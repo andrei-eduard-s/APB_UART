@@ -28,7 +28,7 @@ class tranzactie_agent_actuator extends uvm_sequence_item;
 	tranzactie_agent_actuator _obj;
 	$cast(_obj, rhs);
 	res = super.do_compare(_obj, comparer) &
-	      interrupt == _obj.interrupt &
+	      interrupt == _obj.interrupt;
     `uvm_info(get_name(), $sformatf("In tranzactie_agent_actuator::do_compare(), rezultatul comparatiei este %0b", res), UVM_LOW)
 	return res;
   endfunction
