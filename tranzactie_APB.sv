@@ -8,7 +8,7 @@ class tranzactie_APB extends uvm_sequence_item;
   `uvm_object_utils(tranzactie_APB)
   
   rand bit[2:0] paddr;
-  rand bit[3:0] pwdata;
+  rand bit[3:0] pdata;
 
   rand bit pwrite;
   bit perror;
@@ -19,7 +19,7 @@ class tranzactie_APB extends uvm_sequence_item;
   function new(string name = "element_APB");//numele dat este ales aleatoriu, si nu mai este folosit in alta parte
     super.new(name);  
     paddr  = 2;
-  	pwdata = 5;
+  	pdata = 5;
   	pwrite = 1;
     perror = false;
     delay = 3;
@@ -27,13 +27,13 @@ class tranzactie_APB extends uvm_sequence_item;
   
   //functie de afisare a unei tranzactii
   function void afiseaza_informatia_tranzactiei();
-    $display("Valoarea adresei: %0h, Valoarea datelor: %0h, Valoarea write: %0h, Valoarea error: %0h, Valoarea delay: %0h", paddr, pwdata, pwrite, perror, delay);
+    $display("Valoarea adresei: %0h, Valoarea datelor: %0h, Valoarea write: %0h, Valoarea error: %0h, Valoarea delay: %0h", paddr, pdata, pwrite, perror, delay);
   endfunction
   
   function tranzactie_APB copy();
 	copy = new();
 	copy.paddr  = this.paddr;
-	copy.pwdata = this.pwdata;
+	copy.pdata = this.pdata;
 	copy.pwrite = this.pwrite;
   copy.perror = this.perror;
   copy.delay  = this.delay;
