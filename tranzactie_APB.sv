@@ -8,12 +8,14 @@ class tranzactie_APB extends uvm_sequence_item;
   `uvm_object_utils(tranzactie_APB)
   
   rand bit[2:0] paddr;
-  rand bit[3:0] pdata;
+  rand bit[7:0] pdata;
 
   rand bit pwrite;
   bit perror;
-  unsigned delay;
+  rand unsigned delay; 
 
+
+constraint delay_c {delay inside {[0:15]};}
   
   //constructorul clasei; această funcție este apelată când se creează un obiect al clasei "tranzactie"
   function new(string name = "element_APB");//numele dat este ales aleatoriu, si nu mai este folosit in alta parte
@@ -33,7 +35,7 @@ class tranzactie_APB extends uvm_sequence_item;
   function tranzactie_APB copy();
 	copy = new();
 	copy.paddr  = this.paddr;
-	copy.pdata = this.pdata;
+	copy.pdata  = this.pdata;
 	copy.pwrite = this.pwrite;
   copy.perror = this.perror;
   copy.delay  = this.delay;

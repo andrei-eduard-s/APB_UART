@@ -14,7 +14,7 @@ interface apb_interface_dut;
   logic [7:0]    pwdata;    // Write data bus
   logic [7:0]    prdata;    // Read data bus
   logic          pready;    // Ready signal
-  // logic       pslverr;   // Slave error signal
+  logic          pslverr;   // Slave error signal
 
 
   // 1. Asertie: psel nu poate fi activ fara pready  
