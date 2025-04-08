@@ -6,6 +6,8 @@ virtual class uart_monitor extends uvm_monitor;
 
   `uvm_component_utils(uart_monitor)
 
+  uart_coverage cvg;
+
   uvm_analysis_port #(uart_item) item_collected_port;
   uart_item item_collected_rx;
   uart_item item_collected_tx;
@@ -20,6 +22,7 @@ virtual class uart_monitor extends uvm_monitor;
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
+    cvg = uart_coverage::type_id::create("cvg", this)
     item_collected_rx = uart_item::type_id::create("item_collected_rx", this);
     item_collected_tx = uart_item::type_id::create("item_collected_tx", this);
   endfunction : build_phase
@@ -69,6 +72,8 @@ virtual class uart_monitor extends uvm_monitor;
       item_collected_port.write(item_collected_rx);  // Send transaction to analysis port
     end
 
+    cvg.cvg_uart_rx_values.sample();
+
   endtask : collect_item_rx
 
   task collect_item_tx();
@@ -101,6 +106,8 @@ virtual class uart_monitor extends uvm_monitor;
       `uvm_info("UART_MONITOR", $sformatf("Captured item on TX: %s", item_collected_tx.sprint()), UVM_MEDIUM);
       item_collected_port.write(item_collected_tx);  // Send transaction to analysis port
     end
+
+    cvg.cvg_uart_tx_values.sample();
 
   endtask : collect_item_tx
 

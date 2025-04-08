@@ -1,10 +1,13 @@
 `ifndef __uart_agent
 `define __uart_agent
 
+typedef class uart_monitor;
 `include "uart_defines.sv"
 `include "uart_item.sv"
 `include "uart_monitor.sv"
+`include "uart_coverage.sv"
 `include "uart_driver.sv"
+`include "uart_sequencer.sv"
 
 class uart_agent extends uvm_agent;
 
