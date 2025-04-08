@@ -20,8 +20,8 @@ virtual class uart_monitor extends uvm_monitor;
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    item_collected_rx = uart_item::type_id::create("item_collected_rx", this)
-    item_collected_tx = uart_item::type_id::create("item_collected_tx", this)
+    item_collected_rx = uart_item::type_id::create("item_collected_rx", this);
+    item_collected_tx = uart_item::type_id::create("item_collected_tx", this);
   endfunction : build_phase
 
   function void connect_phase(uvm_phase phase);
