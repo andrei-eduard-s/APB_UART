@@ -38,7 +38,7 @@ endfunction : new
 	
 	// Add initialization code here (e.g., variables, queues, etc.)
   if (!uvm_config_db#(uart_config)::get(this, "", "uart_cfg", p_uart_cfg))
-   `uvm_fatal("NOVCFG", "Failed to get UART config from config DB")
+   `uvm_fatal("NOCFG", "Failed to get UART config from config DB")
 
 	fifo_wr_ptr = 0; // starts at the beginning of the FIFO
 	fifo_rd_ptr = 0; // (empty) also starts at the beginning
@@ -63,7 +63,6 @@ endfunction : new
         reg_uart_config = t.pdata;
         p_uart_cfg.decode_uart_config(reg_uart_config);
     end
-
 		default: `uvm_info(get_full_name(), "adresa incorecta", UVM_LOW)
 		endcase
 		end
@@ -74,7 +73,7 @@ endfunction : new
 		2: assert (reg_data_rx == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_data_rx);
 		3: assert (reg_status == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_status);
 		4: assert (reg_uart_config == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_uart_config);
-		
+    endcase
 		end
   endfunction : write_apb
 
