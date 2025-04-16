@@ -6,6 +6,7 @@ class uart_driver extends uvm_driver #(uart_item);
   `uvm_component_utils(uart_driver)
   
   virtual interface uart_interface_dut uart_vif;
+  uart_config uart_cfg;
   string agent_name;
   
   function new(string name = "uart_driver", uvm_component parent);
@@ -44,16 +45,16 @@ class uart_driver extends uvm_driver #(uart_item);
     repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
     uart_vif.uart_tx <= 0;
     //transmit data
-    for (int i = 0; i < `DATA_SIZE; i++) begin
+    for (int i = 0; i < uart_cfg.data_size; i++) begin
       repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
       uart_vif.uart_tx <= item_driven.data[i];
     end
     //parity bits
-    repeat(`BAUD_RATE * `PARITY_SIZE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
     uart_vif.uart_tx <= item_driven.parity; 
 
     //stop bit
-    repeat(`BAUD_RATE *(item_driven.stop + 1)) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    repeat(`BAUD_RATE *(uart_cfg.stop_bits_number)) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
     uart_vif.uart_tx <= 1'b1; 
 
     this.end_tr(item_driven);

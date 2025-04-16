@@ -3,6 +3,7 @@
 
 typedef class uart_monitor;
 `include "uart_defines.sv"
+`include "uart_config.sv"
 `include "uart_item.sv"
 `include "uart_monitor.sv"
 `include "uart_coverage.sv"
@@ -23,6 +24,7 @@ class uart_agent extends uvm_agent;
 
   string name;
   virtual interface uart_interface_dut uart_vif;
+  uart_config uart_cfg;
 
   function new(string name = "uart_agent", uvm_component parent = null);
     super.new(name, parent);
@@ -32,8 +34,11 @@ class uart_agent extends uvm_agent;
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
 
-    if (!uvm_config_db#(virtual uart_vif)::get(this, "", "uart_vif", uart_vif))
+    if (!uvm_config_db#(virtual uart_interface_dut)::get(this, "", "uart_vif", uart_vif))
       `uvm_fatal("NOVIF", "No virtual interface specified for this agent instance.")
+
+    if (!uvm_config_db#(virtual uart_config)::get(this, "", "uart_cfg", uart_cfg))
+      `uvm_fatal("NOCFG", "No config file specified for this agent instance.")
 
     monitor = uart_monitor::type_id::create("monitor", this);
     if (is_active == UVM_ACTIVE) begin
@@ -48,11 +53,13 @@ class uart_agent extends uvm_agent;
 
     monitor.agent_name = this.name;
     monitor.uart_vif   = this.uart_vif;
+    monitor.uart_cfg   = this.uart_cfg;
 
     if (is_active == UVM_ACTIVE) begin
       driver.seq_item_port.connect(sequencer.seq_item_export);
       driver.agent_name = this.name;
       driver.uart_vif   = this.uart_vif;
+      driver.uart_cfg   = this.uart_cfg;
     end
 
   endfunction : connect_phase

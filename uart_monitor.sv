@@ -13,6 +13,7 @@ virtual class uart_monitor extends uvm_monitor;
   uart_item item_collected_tx;
 
   virtual interface uart_interface_dut uart_vif;
+  uart_config uart_cfg;
   string agent_name;
 
   function new(string name = "uart_monitor", uvm_component parent);
@@ -51,26 +52,22 @@ virtual class uart_monitor extends uvm_monitor;
     item_collected_rx.delay = delay;
 
     // Capture data bits
-    for (int i = 0; i < `DATA_SIZE; i++) begin
+    for (int i = 0; i < uart_cfg.data_size; i++) begin
       repeat (`BAUD_RATE) 
       @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);  
       item_collected_rx.data[i] = uart_vif.uart_rx;
     end
 
     // Capture parity bit
-    repeat((`BAUD_RATE) * (`PARITY_SIZE-1))
-    @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-    item_collected_rx.parity[i] = uart_vif.uart_rx; //TODO alin vedem daca trebuie modificati la biti de paritate
+    repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    item_collected_rx.parity[i] = uart_vif.uart_rx; 
 
     // Capture stop bit(s)
-    repeat(`BAUD_RATE)
-    @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    repeat(`BAUD_RATE * uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
     assert(uart_vif.uart_rx == 1);
 
-    if(uart_vif.reset_n == 1) begin
-      `uvm_info("UART_MONITOR", $sformatf("Captured item on RX: %s", item_collected_rx.sprint()), UVM_MEDIUM);
-      item_collected_port.write(item_collected_rx);  // Send transaction to analysis port
-    end
+    `uvm_info("UART_MONITOR", $sformatf("Captured item on RX: %s", item_collected_rx.sprint()), UVM_MEDIUM);
+    item_collected_port.write(item_collected_rx);  // Send transaction to analysis port
 
     cvg.cvg_uart_rx_values.sample();
 
@@ -87,25 +84,21 @@ virtual class uart_monitor extends uvm_monitor;
     item_collected_tx.delay = delay;
 
     // Capture data bits
-    for (int i = 0; i < `DATA_SIZE; i++) begin
+    for (int i = 0; i < uart_cfg.data_size; i++) begin
       repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);  
       item_collected_tx.data[i] = uart_vif.uart_tx;
     end
 
     // Capture parity bit
-    for (int i = 0; i < `PARITY_SIZE; i++) begin
-      repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-      item_collected_tx.parity = uart_vif.uart_tx; //TODO alin vedem daca trebuie modificati la biti de paritate
-    end
+    repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    item_collected_tx.parity = uart_vif.uart_tx; 
 
     // Capture stop bit(s)
-    repeat(`BAUD_RATE * (`STOP_BITS))@(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    repeat(`BAUD_RATE * uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
     assert(uart_vif.uart_tx == 1);
 
-    if(uart_vif.reset_n == 1) begin
-      `uvm_info("UART_MONITOR", $sformatf("Captured item on TX: %s", item_collected_tx.sprint()), UVM_MEDIUM);
-      item_collected_port.write(item_collected_tx);  // Send transaction to analysis port
-    end
+    `uvm_info("UART_MONITOR", $sformatf("Captured item on TX: %s", item_collected_tx.sprint()), UVM_MEDIUM);
+    item_collected_port.write(item_collected_tx);  // Send transaction to analysis port
 
     cvg.cvg_uart_tx_values.sample();
 
