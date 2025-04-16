@@ -19,7 +19,7 @@ class scoreboard extends uvm_scoreboard;
   logic [7:0] reg_data_tx; // addr 0
   logic [7:0] reg_data_rx; // addr 2
   logic [7:0] reg_status; // addr 3
-  logic [7:0] reg_uart_config // addr 4
+  logic [7:0] reg_uart_config; // addr 4
 
   
 function new(string name = "scoreboard", uvm_component parent = null);
@@ -67,14 +67,19 @@ endfunction : new
 		endcase
 		end
 		else
-		begin//daca avem citire
-		case(paddr)
-		0:`uvm_info(get_full_name(), "REGISTRU WRiTE_ONLY, nu se poate Citi", UVM_LOW)
-		2: assert (reg_data_rx == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_data_rx);
-		3: assert (reg_status == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_status);
-		4: assert (reg_uart_config == t.pdata) else `uvm_error("valoarea prezisa de dut: %0h, valoarea din scoreboard: %0h", t.pdata, reg_uart_config);
-    endcase
-		end
+		begin // daca avem citire
+   case (paddr)
+      0: `uvm_info(get_full_name(), "REGISTRU WRITE_ONLY, nu se poate citi", UVM_LOW);
+      2: assert (reg_data_rx == t.pdata)
+         else `uvm_error("SCB_APB_ERR", $sformatf("Valoarea prezisa de DUT: %0h, valoarea din scoreboard: %0h", t.pdata, reg_data_rx));
+      3: assert (reg_status == t.pdata)
+         else `uvm_error("SCB_APB_ERR", $sformatf("Valoarea prezisa de DUT: %0h, valoarea din scoreboard: %0h", t.pdata, reg_status));
+      4: assert (reg_uart_config == t.pdata)
+         else `uvm_error("SCB_APB_ERR", $sformatf("Valoarea prezisa de DUT: %0h, valoarea din scoreboard: %0h", t.pdata, reg_uart_config));
+      default: `uvm_info(get_full_name(), "Adresa incorecta", UVM_LOW);
+   endcase
+end
+
   endfunction : write_apb
 
 
@@ -90,7 +95,7 @@ endfunction : new
 	if (^{t.data,t.parity} == 0) 
 	reg_status[3] = 0; // nu am eroare de paritate
 	else begin //am eroare de paritate
-	`uvm_error("valoarea de paritate este gresita: %0h pentru data: %0h", t.parity, t.data);
+	`uvm_error("SCB_UART_ERR", $sformatf("valoarea de paritate este gresita: %0h pentru data: %0h", t.parity, t.data));
 	reg_status[3] =1;
 	end
 //daca avem paritate si daca paritatea este impara
@@ -99,8 +104,8 @@ endfunction : new
 	reg_status[3] = 0; // nu am eroare de paritate
 	
 	else begin //am eroare de paritate
-	`uvm_error("valoarea de paritate este gresita: %0h pentru data: %0h", t.parity, t.data);
-	reg_status[3] =1;
+	`uvm_error("SCB_UART_ERR", $sformatf("valoarea de paritate este gresita: %0h pentru data: %0h", t.parity, t.data));
+	reg_status[3] = 1;
 	end		
   endfunction : write_uart
   
@@ -119,5 +124,4 @@ endfunction : new
     // Add continuous checking or processing code here
   endtask : run_phase
   
-  
-endclass
+endclass : scoreboard
