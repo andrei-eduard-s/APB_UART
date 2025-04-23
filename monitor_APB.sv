@@ -1,27 +1,30 @@
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
-class monitor_APB extends uvm_monitor;
+`ifndef __apb_monitor
+`define __apb_monitor
+//`include "tranzactie_semafoare.sv"
 
-//monitorul se adauga in baza de date UVM
-`uvm_component_utils (monitor_APB) 
+class monitor_apb extends uvm_monitor;
   
-//se declara colectorul de coverage care va inregistra valorile semnalelor de pe interfata citite de monitor
-coverage_apb colector_coverage_apb; 
+  //monitorul se adauga in baza de date UVM
+  `uvm_component_utils (monitor_apb) 
   
-//este creat portul prin care monitorul trimite spre exterior
-uvm_analysis_port #(tranzactie_APB) port_date_monitor_apb;
-
-//declaratia interfetei de unde monitorul isi colecteaza datele
-virtual apb_interface_dut interfata_monitor_apb;
+  //se declara colectorul de coverage care va inregistra valorile semnalelor de pe interfata citite de monitor
+  coverage_apb colector_coverage_apb; 
   
-tranzactie_apb tranzactia_colectata_apb, aux_tr_apb;
-
-int delay = 0;
+  //este creat portul prin care monitorul trimite spre exterior (la noi, informatia este accesata de scoreboard), prin intermediul agentului, tranzactiile extrase din traficul de pe interfata
+  uvm_analysis_port #(tranzactie_apb) port_date_monitor_apb;
   
-//constructorul clasei
-function new(string name = "monitor_APB", uvm_component parent = null);
-
+  //declaratia interfetei de unde monitorul isi colecteaza datele
+  //virtual interfata_apb interfata_monitor_apb;
+  virtual apb_interface_dut interfata_monitor_apb;
+  
+  tranzactie_apb starea_preluata_a_apb, aux_tr_apb;
+  int delay;
+  //constructorul clasei
+  function new(string name = "monitor_apb", uvm_component parent = null);
+    
     //prima data se apeleaza constructorul clasei parinte
     super.new(name, parent);
     
@@ -32,12 +35,14 @@ function new(string name = "monitor_APB", uvm_component parent = null);
     
     colector_coverage_apb = coverage_apb::type_id::create ("colector_coverage_apb", this);
     
-    //se creeaza obiectul (tranzactia) in care se vor retine datele colectate de pe interfata la fiecare tact de ceas
-    tranzactia_colectata_apb = tranzactie_APB::type_id::create("date_noi");
     
-    aux_tr_apb = tranzactie_APB::type_id::create("aux_date_noi");
-endfunction
-
+    //se creeaza obiectul (tranzactia) in care se vor retine datele colectate de pe interfata la fiecare tact de ceas
+    starea_preluata_a_apb = tranzactie_apb::type_id::create("date_noi");
+    
+    aux_tr_apb = tranzactie_apb::type_id::create("datee_noi");
+  endfunction
+  
+  
   //se preia din baza de date interfata la care se va conecta monitorul pentru a citi date, si se "leaga" la interfata pe care deja monitorul o contine
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
@@ -45,9 +50,10 @@ endfunction
     if (!uvm_config_db#(virtual apb_interface_dut)::get(this, "", "apb_interface_dut", interfata_monitor_apb))
         `uvm_fatal("MONITOR_apb", "Nu s-a putut accesa interfata monitorului")
   endfunction
-
-
-virtual function void connect_phase (uvm_phase phase);
+        
+  
+  
+  virtual function void connect_phase (uvm_phase phase);
     super.connect_phase(phase);
     
     //in faza UVM "connect", se face conexiunea intre pointerul catre monitor din instanta colectorului de coverage a acestui monitor si monitorul insusi 
@@ -55,7 +61,7 @@ virtual function void connect_phase (uvm_phase phase);
     
   endfunction
   
-  virtual task run_phase(uvm_phase phase);
+   virtual task run_phase(uvm_phase phase);
     super.run_phase(phase);
     
     forever begin
@@ -69,21 +75,21 @@ virtual function void connect_phase (uvm_phase phase);
        wait(interfata_monitor_apb.pready)
      // @(negedge interfata_monitor_apb.pclk); 
       //preiau datele de pe interfata de iesire a DUT-ului
-      tranzactia_colectata_apb.delay = delay;
-      tranzactia_colectata_apb.paddr  = interfata_monitor_apb.paddr;
-      tranzactia_colectata_apb.pwrite = interfata_monitor_apb.pwrite;
-      tranzactia_colectata_apb.perror = interfata_monitor_apb.pslverr;
+      starea_preluata_a_apb.delay = delay;
+      starea_preluata_a_apb.paddr  = interfata_monitor_apb.paddr;
+      starea_preluata_a_apb.pwrite = interfata_monitor_apb.pwrite;
+      starea_preluata_a_apb.perror = interfata_monitor_apb.pslverr;
       
-      if(tranzactia_colectata_apb.pwrite)
-        tranzactia_colectata_apb.pdata = interfata_monitor_apb.pwdata;
+      if(starea_preluata_a_apb.pwrite)
+        starea_preluata_a_apb.pdata = interfata_monitor_apb.pwdata;
       else
-        tranzactia_colectata_apb.pdata = interfata_monitor_apb.prdata;
+        starea_preluata_a_apb.pdata = interfata_monitor_apb.prdata;
     
-      aux_tr_apb = tranzactia_colectata_apb.copy();//nu vreau sa folosesc pointerul tranzactia_colectata_apb pentru a trimite datele, deoarece continutul acestuia se schimba, iar scoreboardul va citi alte date 
+      aux_tr_apb = starea_preluata_a_apb.copy();//nu vreau sa folosesc pointerul starea_preluata_a_apb pentru a trimite datele, deoarece continutul acestuia se schimba, iar scoreboardul va citi alte date 
       
        //tranzactia cuprinzand datele culese de pe interfata se pune la dispozitie pe portul monitorului, daca modulul nu este in reset
       port_date_monitor_apb.write(aux_tr_apb); 
-      `uvm_info("MONITOR_apb", $sformatf("S-a receptionat tranzactia cu informatiile:"), UVM_NONE)
+      `uvm_info("MONITOR_APB", $sformatf("S-a receptionat tranzactia cu informatiile:"), UVM_NONE)
       aux_tr_apb.afiseaza_informatia_tranzactiei();
 	  
       //se inregistreaza valorile de pe cele doua semnale de iesire
@@ -97,3 +103,5 @@ virtual function void connect_phase (uvm_phase phase);
   
   
 endclass: monitor_apb
+
+`endif

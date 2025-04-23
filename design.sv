@@ -1,26 +1,23 @@
-`timescale 1ns/1ps
+module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata, pready, uart_rx, uart_tx, int_o);
 
-module uart_apb_dut (
-    // Interfata APB
-    input  wire        pclk,       // semnal de ceas
-    input  wire        preset_n,   // semnal de reset, activ low
-    input  wire [3:0]  paddr,      // adresa APB
-    input  wire        psel,       // selectia slave-ului
-    input  wire        penable,    // activare tranzactie
-    input  wire        pwrite,     // 1: scriere, 0: citire
-    input  wire [7:0]  pwdata,     // date de scriere
-    output reg  [7:0]  prdata,     // date citite
-    output reg         pready,     // semnal gata (simplificat: mereu 1, dupa reset)
+  // Interfata apb
+    input              pclk;       // semnal de ceas
+    input              preset_n;   // semnal de reset, activ low
+    input       [3:0]  paddr;      // adresa apb
+    input              psel;       // selectia slave-ului
+    input              penable;    // activare tranzactie
+    input              pwrite;     // 1: scriere, 0: citire
+    input       [7:0]  pwdata;     // date de scriere
+    output reg  [7:0]  prdata;     // date citite
+    output reg         pready;     // semnal gata (simplificat: mereu 1, dupa reset)
     
     // Interfata UART
-    input  wire        uart_rx,    // linia de receptie seriala (intrare)
-    output reg         uart_tx,    // linia de transmisie seriala (iesire)
+    input              uart_rx;    // linia de receptie seriala (intrare)
+    output reg         uart_tx;    // linia de transmisie seriala (iesire)
     
     // Interfata de intreruperi (3 iesiri pentru diferite conditii)
-    output reg  [2:0]  int_o       // [0]: TX FIFO plin, [1]: RX overrun, [2]: TX error
-);
-
-    // Logica pentru semnalul pready:
+    output reg  [2:0]  int_o;       // [0]: TX FIFO plin, [1]: RX overrun, [2]: TX error
+  // Logica pentru semnalul pready:
     // In timpul reset-ului, pready = 0, iar dupa reset, pready = 1.
     always @(posedge pclk or negedge preset_n) begin
         if (!preset_n)

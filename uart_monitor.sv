@@ -2,7 +2,7 @@
 `ifndef __uart_monitor
 `define __uart_monitor
 
-virtual class uart_monitor extends uvm_monitor;
+class uart_monitor extends uvm_monitor;
 
   `uvm_component_utils(uart_monitor)
 
@@ -11,6 +11,9 @@ virtual class uart_monitor extends uvm_monitor;
   uvm_analysis_port #(uart_item) item_collected_port;
   uart_item item_collected_rx;
   uart_item item_collected_tx;
+
+  int delay_rx;
+  int delay_tx;
 
   virtual interface uart_interface_dut uart_vif;
   uart_config uart_cfg;
@@ -23,7 +26,7 @@ virtual class uart_monitor extends uvm_monitor;
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    cvg = uart_coverage::type_id::create("cvg", this)
+    cvg = uart_coverage::type_id::create("cvg", this);
     item_collected_rx = uart_item::type_id::create("item_collected_rx", this);
     item_collected_tx = uart_item::type_id::create("item_collected_tx", this);
   endfunction : build_phase
@@ -35,8 +38,8 @@ virtual class uart_monitor extends uvm_monitor;
   task run_phase(uvm_phase phase);
     `uvm_info(get_type_name(), "Start Running", UVM_LOW)
     fork
-    forever collect_item_rx;
-    forever collect_item_tx;
+      forever collect_item_rx;
+      forever collect_item_tx;
     join
   endtask : run_phase
 
@@ -44,63 +47,71 @@ virtual class uart_monitor extends uvm_monitor;
   task collect_item_rx();
 
     //capture delay
-    int delay = 0;
-    while(uart_vif.uart_tx == 1) begin
+    delay_rx = 0;
+    while (uart_vif.uart_rx == 1 || uart_vif.reset_n == 0) begin
       @(posedge uart_vif.clk_i);
-      delay++;
+      if (uart_vif.reset_n == 0) delay_rx = 0;
+      else delay_rx++;
     end
-    item_collected_rx.delay = delay;
+    item_collected_rx.delay = delay_rx;
 
+    //the start bit
+    // @(posedge uart_vif.clk_i);
     // Capture data bits
     for (int i = 0; i < uart_cfg.data_size; i++) begin
-      repeat (`BAUD_RATE) 
-      @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);  
+      @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
       item_collected_rx.data[i] = uart_vif.uart_rx;
     end
 
     // Capture parity bit
-    repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-    item_collected_rx.parity[i] = uart_vif.uart_rx; 
+    @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    item_collected_rx.parity = uart_vif.uart_rx;
 
     // Capture stop bit(s)
-    repeat(`BAUD_RATE * uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-    assert(uart_vif.uart_rx == 1);
+    repeat (uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    assert (uart_vif.uart_rx == 1);
 
-    `uvm_info("UART_MONITOR", $sformatf("Captured item on RX: %s", item_collected_rx.sprint()), UVM_MEDIUM);
+    item_collected_rx.afiseaza_informatia_tranzactiei();
     item_collected_port.write(item_collected_rx);  // Send transaction to analysis port
 
-    cvg.cvg_uart_rx_values.sample();
+    cvg.cvg_uart_rx_values.sample(item_collected_rx.data, item_collected_rx.parity,
+                                  item_collected_rx.delay);
 
   endtask : collect_item_rx
 
   task collect_item_tx();
 
     //capture delay
-    int delay = 0;
-    while(uart_vif.uart_tx == 1) begin
-      @(posedge uart_vif.clk_i);
-      delay++;
-    end
-    item_collected_tx.delay = delay;
+    delay_tx = 0;
 
+    while (uart_vif.uart_tx == 1 || uart_vif.reset_n == 0) begin
+      @(posedge uart_vif.clk_i);
+      if (uart_vif.reset_n == 0) delay_tx = 0;
+      else delay_tx++;
+    end
+    item_collected_tx.delay = delay_tx;
+
+    //the start bit
+    // @(posedge uart_vif.clk_i);
     // Capture data bits
     for (int i = 0; i < uart_cfg.data_size; i++) begin
-      repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);  
+      @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
       item_collected_tx.data[i] = uart_vif.uart_tx;
     end
 
     // Capture parity bit
-    repeat(`BAUD_RATE) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-    item_collected_tx.parity = uart_vif.uart_tx; 
+    @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    item_collected_tx.parity = uart_vif.uart_tx;
 
     // Capture stop bit(s)
-    repeat(`BAUD_RATE * uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-    assert(uart_vif.uart_tx == 1);
+    repeat (uart_cfg.stop_bits_number) @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
+    assert (uart_vif.uart_tx == 1);
 
-    `uvm_info("UART_MONITOR", $sformatf("Captured item on TX: %s", item_collected_tx.sprint()), UVM_MEDIUM);
+    item_collected_tx.afiseaza_informatia_tranzactiei();
     item_collected_port.write(item_collected_tx);  // Send transaction to analysis port
 
-    cvg.cvg_uart_tx_values.sample();
+    cvg.cvg_uart_tx_values.sample(item_collected_tx.data, item_collected_tx.parity,
+                                  item_collected_tx.delay);
 
   endtask : collect_item_tx
 

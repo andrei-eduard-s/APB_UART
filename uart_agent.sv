@@ -2,13 +2,12 @@
 `define __uart_agent
 
 typedef class uart_monitor;
-`include "uart_defines.sv"
 `include "uart_config.sv"
 `include "uart_item.sv"
-`include "uart_monitor.sv"
-`include "uart_coverage.sv"
-`include "uart_driver.sv"
 `include "uart_sequencer.sv"
+`include "uart_coverage.sv"
+`include "uart_monitor.sv"
+`include "uart_driver.sv"
 
 class uart_agent extends uvm_agent;
 
@@ -34,10 +33,10 @@ class uart_agent extends uvm_agent;
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
 
-    if (!uvm_config_db#(virtual uart_interface_dut)::get(this, "", "uart_vif", uart_vif))
+    if (!uvm_config_db#(virtual uart_interface_dut)::get(this, "", "uart_interface_dut", uart_vif))
       `uvm_fatal("NOVIF", "No virtual interface specified for this agent instance.")
 
-    if (!uvm_config_db#(virtual uart_config)::get(this, "", "uart_cfg", uart_cfg))
+    if (!uvm_config_db#(uart_config)::get(this, "", "uart_config", uart_cfg))
       `uvm_fatal("NOCFG", "No config file specified for this agent instance.")
 
     monitor = uart_monitor::type_id::create("monitor", this);

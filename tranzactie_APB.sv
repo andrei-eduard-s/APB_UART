@@ -1,30 +1,31 @@
-`ifndef __APB_transaction
-`define __APB_transaction
+`include "uvm_macros.svh"
+import uvm_pkg::*;
+
+`ifndef __apb_transaction
+`define __apb_transaction
 
 //o tranzactie este formata din totalitatea datelor transmise la un moment dat pe o interfata
-class tranzactie_APB extends uvm_sequence_item;
+class tranzactie_apb extends uvm_sequence_item;
   
   //componenta tranzactie se adauga in baza de date
-  `uvm_object_utils(tranzactie_APB)
+  `uvm_object_utils(tranzactie_apb)
   
   rand bit[2:0] paddr;
   rand bit[7:0] pdata;
 
   rand bit pwrite;
   bit perror;
-  rand unsigned delay; 
+  rand bit [5:0] delay; 
 
-
-constraint delay_c {delay inside {[0:15]};}
   
   //constructorul clasei; această funcție este apelată când se creează un obiect al clasei "tranzactie"
-  function new(string name = "element_APB");//numele dat este ales aleatoriu, si nu mai este folosit in alta parte
+  function new(string name = "element_secventaa");//numele dat este ales aleatoriu, si nu mai este folosit in alta parte
     super.new(name);  
-    paddr  = 2;
-  	pdata = 5;
-  	pwrite = 1;
-    perror = false;
-    delay = 3;
+  	paddr   = 0;
+    pdata  = 0;
+    pwrite = 0;
+    perror = 0;
+    delay  = 1;
   endfunction
   
   //functie de afisare a unei tranzactii
@@ -32,9 +33,10 @@ constraint delay_c {delay inside {[0:15]};}
     $display("Valoarea adresei: %0h, Valoarea datelor: %0h, Valoarea write: %0h, Valoarea error: %0h, Valoarea delay: %0h", paddr, pdata, pwrite, perror, delay);
   endfunction
   
-  function tranzactie_APB copy();
+  function tranzactie_apb copy();
 	copy = new();
 	copy.paddr  = this.paddr;
+  copy.paddr  = this.paddr;
 	copy.pdata  = this.pdata;
 	copy.pwrite = this.pwrite;
   copy.perror = this.perror;
