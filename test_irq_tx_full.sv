@@ -3,21 +3,13 @@
 `ifndef __TEST_IRQ_TX_FULL
 `define __TEST_IRQ_TX_FULL
 
-class test_irq_tx_full extends uvm_test;
+class test_irq_tx_full extends test_exemplu;
 
   `uvm_component_utils(test_irq_tx_full)
-
-  mediu_verificare mediu_verificare;
 
 //constructorul clasei
   function new(string name = "test_irq_tx_full", uvm_component parent = null);
     super.new(name, parent);
-  endfunction
-
-//instantiem mediul de verificare
-  virtual function void build_phase(uvm_phase phase);
-    super.build_phase(phase);
-    mediu_verificare = mediu_verificare::type_id::create("mediu_verificare", this);
   endfunction
 
 //simulam o situatie de TX_FULL
@@ -28,12 +20,12 @@ class test_irq_tx_full extends uvm_test;
 
 //simulam 16 scrieri succesive in FIFO-ul de transmisie
     repeat (16) begin
-// simulam o scriere in registrul de date TX
-      force mediu_verificare.agent_apb.interfata_monitor_apb.paddr = 4'h2;   //adresa registrului TX
+//simulam o scriere in registrul de date TX
+      force mediu_verificare.agent_apb.interfata_monitor_apb.paddr = 4'h2;//adresa registrului TX
       force mediu_verificare.agent_apb.interfata_monitor_apb.psel = 1'b1;
       force mediu_verificare.agent_apb.interfata_monitor_apb.penable = 1'b1;
       force mediu_verificare.agent_apb.interfata_monitor_apb.pwrite = 1'b1;
-      force mediu_verificare.agent_apb.interfata_monitor_apb.pwdata = $urandom_range(0, 255);// date random
+      force mediu_verificare.agent_apb.interfata_monitor_apb.pwdata = $urandom_range(0, 255);//date random
       #20ns;
     end
 
