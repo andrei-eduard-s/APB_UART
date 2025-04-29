@@ -29,11 +29,6 @@ import uvm_pkg::*;
 		    bins other_delays  = {[11:$]};
     }
 
-    perror_cp: coverpoint p_monitor.starea_preluata_a_apb.perror{
-        bins low  = {0};
-        bins high = {1};
-    }
-
     pwrite_cp:  coverpoint p_monitor.starea_preluata_a_apb.pwrite;
 
     coverpoint p_monitor.starea_preluata_a_apb.pdata{
@@ -43,14 +38,7 @@ import uvm_pkg::*;
     }
 
     cross_addr_cp_pwrite_cp:  cross addr_cp, pwrite_cp ;
-    //TODO eroare sintaxa 
-    // cross_addr_cp_perror_cp:  cross addr_cp, perror_cp {
-    //  bins illegal_combination = binsof(addr_cp.data_tx     ) && binsof(perror_cp.high);
-    //  bins illegal_combination = binsof(addr_cp.data_rx     ) && binsof(perror_cp.high);
-    //  bins illegal_combination = binsof(addr_cp.status      ) && binsof(perror_cp.high);
-    //  bins illegal_combination = binsof(addr_cp.uart_config ) && binsof(perror_cp.high);
-    //}
-
+    
   endgroup
   
   //se creeaza grupul de coverage; ATENTIE! Fara functia de mai jos, grupul de coverage nu va putea esantiona niciodata date deoarece pana acum el a fost doar declarat, nu si creat

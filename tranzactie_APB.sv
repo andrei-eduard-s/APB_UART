@@ -14,7 +14,6 @@ class tranzactie_apb extends uvm_sequence_item;
   rand bit[7:0] pdata;
 
   rand bit pwrite;
-  bit perror;
   rand bit [5:0] delay; 
 
   
@@ -24,13 +23,12 @@ class tranzactie_apb extends uvm_sequence_item;
   	paddr   = 0;
     pdata  = 0;
     pwrite = 0;
-    perror = 0;
     delay  = 1;
   endfunction
   
   //functie de afisare a unei tranzactii
   function void afiseaza_informatia_tranzactiei();
-    $display("Valoarea adresei: %0h, Valoarea datelor: %0h, Valoarea write: %0h, Valoarea error: %0h, Valoarea delay: %0h", paddr, pdata, pwrite, perror, delay);
+    $display("Valoarea adresei: %0h, Valoarea datelor: %0h, Valoarea write: %0h, Valoarea delay: %0h", paddr, pdata, pwrite, delay);
   endfunction
   
   function tranzactie_apb copy();
@@ -39,7 +37,6 @@ class tranzactie_apb extends uvm_sequence_item;
   copy.paddr  = this.paddr;
 	copy.pdata  = this.pdata;
 	copy.pwrite = this.pwrite;
-  copy.perror = this.perror;
   copy.delay  = this.delay;
 	return copy;
   endfunction

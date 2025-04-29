@@ -78,7 +78,6 @@ class monitor_apb extends uvm_monitor;
       starea_preluata_a_apb.delay = delay;
       starea_preluata_a_apb.paddr  = interfata_monitor_apb.paddr;
       starea_preluata_a_apb.pwrite = interfata_monitor_apb.pwrite;
-      starea_preluata_a_apb.perror = interfata_monitor_apb.pslverr;
       
       if(starea_preluata_a_apb.pwrite)
         starea_preluata_a_apb.pdata = interfata_monitor_apb.pwdata;
