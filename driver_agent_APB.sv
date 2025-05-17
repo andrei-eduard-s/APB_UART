@@ -42,6 +42,11 @@ class driver_agent_apb extends uvm_driver #(tranzactie_apb);
   task trimiterea_tranzactiei(tranzactie_apb informatia_de_transmis);
     $timeformat(-9, 2, " ns", 20);//cand se va afisa in consola timpul, folosind directiva %t timpul va fi afisat in nanosecunde (-9), cu 2 zecimale, iar dupa valoare se va afisa abrevierea " ns"
     
+   //DONE: se va adauga un semnal de reset
+    if (interfata_driverului_pentru_apb.preset_n == 1'b0) begin
+        @(posedge interfata_driverului_pentru_apb.preset_n);
+    end
+  
     repeat(informatia_de_transmis.delay)@(posedge interfata_driverului_pentru_apb.pclk);
     interfata_driverului_pentru_apb.psel    = 'b1;
     interfata_driverului_pentru_apb.penable = 'b0;

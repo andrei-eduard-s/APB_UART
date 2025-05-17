@@ -21,32 +21,22 @@ class scoreboard extends uvm_scoreboard;
   tranzactie_irq tranzactie_venita_de_la_irq;
   uart_item tranzactie_venita_de_la_uart;
 
-  //tranzactie_apb    tranzactii_apb[$];
-  //tranzactie_irq tranzactii_irq[$];
-
   bit enable;
-
   uart_config p_uart_cfg;
   uart_coverage p_uart_cvg;
 
-  bit [7:0] tx_fifo[0:15];  // Array to mimic the 16-entry TX FIFO
-  int fifo_wr_ptr;  // Write pointer for the FIFO
-  int fifo_rd_ptr;  // Read pointer for the FIFO
-  int fifo_count;  // Number of items in the FIFO
+  bit [7:0] tx_fifo[0:15];
+  int fifo_wr_ptr;
+  int fifo_rd_ptr;
+  int fifo_count;
 
-  logic [7:0] reg_data_tx;  // addr 0
-  logic [7:0] reg_data_rx;  // addr 2
-  logic [7:0] reg_status;  // addr 3
-  logic [7:0] reg_uart_config;  // addr 4
+  logic [7:0] reg_uart_config;  // addr 0x00
+  logic [7:0] reg_data_tx;      // addr 0x02 (W)
+  logic [7:0] reg_data_rx;      // addr 0x03 (R)
+  logic [7:0] reg_status;       // addr 0x04 (R)
 
-  bit [7:0] rx_reg;  // Single register for RX data
-  bit rx_valid;  // Flag to indicate if RX data is available
-
-  //events
-  //
-
-
-
+  bit [7:0] rx_reg;
+  bit rx_valid;
 
   function new(string name = "scoreboard", uvm_component parent = null);
     super.new(name, parent);
@@ -135,12 +125,46 @@ class scoreboard extends uvm_scoreboard;
     end
   endfunction : write_apb
 
+    if (tranzactie_venita_de_la_apb.pwrite == 1) begin  // scriere
+      case (tranzactie_venita_de_la_apb.paddr)
+        8'h00: begin
+          reg_uart_config = tranzactie_venita_de_la_apb.pdata;
+          p_uart_cfg.decode_uart_config(reg_uart_config);
+        end
+        8'h02: begin
+          if (fifo_count < 16) begin
+            reg_data_tx = tranzactie_venita_de_la_apb.pdata;
+            tx_fifo[fifo_wr_ptr] = reg_data_tx;
+            fifo_wr_ptr = (fifo_wr_ptr + 1) % 16;
+            fifo_count++;
+            reg_status[0] = (fifo_count == 16);  // Bit 0: FIFO TX plin
+          end else begin
+            `uvm_info(get_full_name(), "FIFO TX plin - scriere ignorata", UVM_LOW)
+          end
+        end
+        8'h03, 8'h04: `uvm_info(get_full_name(), "REGISTRU READ_ONLY, nu se poate scrie", UVM_LOW)
+        default: `uvm_info(get_full_name(), "Adresa incorecta", UVM_LOW)
+      endcase
+    end else begin  // citire
+      case (tranzactie_venita_de_la_apb.paddr)
+        8'h00: assert (reg_uart_config == tranzactie_venita_de_la_apb.pdata)
+                  else `uvm_error("SCB_APB_ERR", $sformatf("UART_CONFIG mismatch: DUT=%0h, SB=%0h",
+                        tranzactie_venita_de_la_apb.pdata, reg_uart_config))
+        8'h02: `uvm_info(get_full_name(), "REGISTRU WRITE_ONLY, nu se poate citi", UVM_LOW)
+        8'h03: assert (reg_data_rx == tranzactie_venita_de_la_apb.pdata)
+                  else `uvm_error("SCB_APB_ERR", $sformatf("DATA_RX mismatch: DUT=%0h, SB=%0h",
+                        tranzactie_venita_de_la_apb.pdata, reg_data_rx))
+        8'h04: assert (reg_status == tranzactie_venita_de_la_apb.pdata)
+                  else `uvm_error("SCB_APB_ERR", $sformatf("STATUS mismatch: DUT=%0h, SB=%0h",
+                        tranzactie_venita_de_la_apb.pdata, reg_status))
+        default: `uvm_info(get_full_name(), "Adresa incorecta", UVM_LOW)
+      endcase
+    end
+  endfunction : write_apb
 
   function void write_irq(input tranzactie_irq tranzactie_noua_irq);
-    `uvm_info("SCOREBOARD", $sformatf("S-a primit de la agentul irq tranzactia cu informatia:\n"),
-              UVM_LOW)
+    `uvm_info("SCOREBOARD", "Tranzactie IRQ primita:\n", UVM_LOW)
     tranzactie_noua_irq.afiseaza_informatia_tranzactiei();
-
     tranzactie_venita_de_la_irq = tranzactie_noua_irq.copy();
   endfunction : write_irq
 
@@ -197,13 +221,9 @@ class scoreboard extends uvm_scoreboard;
         else 
           `uvm_info("SCOREBOARD checker 1", "IRQ ASSERTED: OK", UVM_LOW)
       end
-      //checker 2
-      if((tranzactii_irq[i].addr == tranzactii_apb[i].paddr) && (tranzactii_irq[i].irq == 0))
-        `uvm_error("SCOREBOARD checker 2", "IRQ expected but not asserted")
-      else 
-        `uvm_info("SCOREBOARD checker 2", "IRQ ASSERTED: OK", UVM_LOW)
     end
-  endfunction*/
+  endfunction : write_uart
+
 endclass : scoreboard
 
 `endif
