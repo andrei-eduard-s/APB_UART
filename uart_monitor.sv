@@ -48,10 +48,12 @@ class uart_monitor extends uvm_monitor;
 
     //capture delay
     delay_rx = 0;
-    while (uart_vif.uart_rx == 1 || uart_vif.reset_n == 0) begin
+    wait(uart_vif.reset_n == 1);
+    while (uart_vif.uart_rx == 1) begin
       @(posedge uart_vif.clk_i);
       if (uart_vif.reset_n == 0) delay_rx = 0;
-      else delay_rx++;
+      else begin delay_rx++;
+      end
     end
     item_collected_rx.delay = delay_rx;
 
@@ -74,8 +76,7 @@ class uart_monitor extends uvm_monitor;
     item_collected_rx.afiseaza_informatia_tranzactiei();
     item_collected_port.write(item_collected_rx);  // Send transaction to analysis port
 
-    cvg.cvg_uart_rx_values.sample(item_collected_rx.data, item_collected_rx.parity,
-                                  item_collected_rx.delay);
+    cvg.rx_data_cp.sample(item_collected_rx.data, item_collected_rx.delay);
 
   endtask : collect_item_rx
 
@@ -84,10 +85,12 @@ class uart_monitor extends uvm_monitor;
     //capture delay
     delay_tx = 0;
 
-    while (uart_vif.uart_tx == 1 || uart_vif.reset_n == 0) begin
+    wait(uart_vif.reset_n == 1);
+    while (uart_vif.uart_tx == 1) begin
       @(posedge uart_vif.clk_i);
       if (uart_vif.reset_n == 0) delay_tx = 0;
-      else delay_tx++;
+      else begin delay_tx++;
+      end
     end
     item_collected_tx.delay = delay_tx;
 
@@ -108,10 +111,10 @@ class uart_monitor extends uvm_monitor;
     assert (uart_vif.uart_tx == 1);
 
     item_collected_tx.afiseaza_informatia_tranzactiei();
+    `uvm_info("UART_MONITOR", "S-a colectat un item de pe linia TX.", UVM_NONE)
     item_collected_port.write(item_collected_tx);  // Send transaction to analysis port
 
-    cvg.cvg_uart_tx_values.sample(item_collected_tx.data, item_collected_tx.parity,
-                                  item_collected_tx.delay);
+    cvg.tx_data_cp.sample(item_collected_tx.data, item_collected_tx.delay);
 
   endtask : collect_item_tx
 

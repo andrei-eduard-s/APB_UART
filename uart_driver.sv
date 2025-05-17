@@ -54,7 +54,7 @@ class uart_driver extends uvm_driver #(uart_item);
     //parity bits
     if (!uart_cfg.parity_inctive) begin
       @(posedge uart_vif.clk_i iff uart_vif.reset_n == 1);
-      uart_vif.uart_tx <= item_driven.parity;
+      uart_vif.uart_tx <= ^item_driven.data;
     end
 
     //stop bit

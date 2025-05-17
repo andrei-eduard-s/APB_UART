@@ -10,55 +10,80 @@ class uart_coverage extends uvm_component;
   //componenta se adauga in baza de date
   `uvm_component_utils(uart_coverage)
   
-  covergroup cvg_uart_rx_values with function sample(bit[7:0] data, bit parity, int delay);
+  covergroup rx_data_cp with function sample(bit[7:0] data, int delay);
     option.per_instance = 1;
 
-    cp_uart_rx_data: coverpoint data {
-      bins min_val = {0};
-      bins mid_val[5] = {[1:200]};
-      bins big_val = {[200:$]};
+    uart_rx_data: coverpoint data {
+      bins min_val    = {0};
+      bins mid_val[5] = {[1:254]};
+      bins max_val    = {255};
     }
 
-    cp_uart_rx_parity: coverpoint parity {
-      bins good_parity = {0};
-      bins bad_parity = {1};
-    }
-
-    cp_uart_rx_delay: coverpoint delay {
-      bins min_val = {0};
+    uart_rx_delay: coverpoint delay {
+      bins min_val    = {0};
       bins mid_val[5] = {[1:19]};
-      bins big_val = {[20:$]};
+      bins max_val    = {20};
     }
     
-  endgroup : cvg_uart_rx_values
+  endgroup : rx_data_cp
 
-  covergroup cvg_uart_tx_values with function sample(bit[7:0] data, bit parity, int delay);
+  covergroup tx_data_cp with function sample(bit[7:0] data, int delay);
     option.per_instance = 1;
 
-    cp_uart_tx_data: coverpoint data {
-      bins min_val = {0};
-      bins mid_val[5] = {[1:200]};
-      bins big_val = {[200:$]};
+    uart_tx_data: coverpoint data {
+      bins min_val    = {0};
+      bins mid_val[5] = {[1:254]};
+      bins max_val    = {255};
     }
 
-    cp_uart_tx_parity: coverpoint parity {
-      bins good_parity = {0};
-      bins bad_parity = {1};
-    }
-
-    cp_uart_tx_delay: coverpoint delay {
-      bins min_val = {0};
+    uart_tx_delay: coverpoint delay {
+      bins min_val    = {0};
       bins mid_val[5] = {[1:19]};
-      bins big_val = {[20:$]};
+      bins max_val    = {20};
     }
     
-  endgroup : cvg_uart_tx_values
+  endgroup : tx_data_cp
+
+  covergroup frame_format_cp with function sample(bit[1:0] data_size, bit parity_inctive, bit parity_type, bit stop_bits_number);
+    option.per_instance = 1;
+
+    uart_data_size: coverpoint data_size {
+      bins eight_bit = {'b11};
+      bins seven_bit = {'b10};
+      bins six_bit   = {'b01};
+      bins five_bit  = {'b00};
+    }
+
+    uart_parity_inactive: coverpoint parity_inctive {
+      bins active   = {0};
+      bins inactive = {1};
+    }
+
+    uart_parity_type: coverpoint parity_type {
+      bins good_parity = {0};
+      bins bad_parity  = {1};
+    }
+
+    uart_stop_bits_number: coverpoint stop_bits_number {
+      bins one_bit = {0};
+      bins two_bit = {1};
+    }
+
+    cross uart_data_size, uart_parity_inactive;
+    cross uart_data_size, uart_parity_type;
+    cross uart_data_size, uart_stop_bits_number;
+    cross uart_parity_inactive, uart_parity_type;
+
+  endgroup : frame_format_cp
+
+  //covergroup baud_rate_cp TODO alin
   
   //se creeaza grupul de coverage; ATENTIE! Fara functia de mai jos, grupul de coverage nu va putea esantiona niciodata date deoarece pana acum el a fost doar declarat, nu si creat
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    cvg_uart_rx_values = new();
-    cvg_uart_tx_values = new();
+    rx_data_cp = new();
+    tx_data_cp = new();
+    frame_format_cp = new();
   endfunction
   
 endclass

@@ -15,6 +15,8 @@ import uvm_pkg::*;
 `include "irq_interface_dut.sv"
 `include "uart_interface_dut.sv"
 `include "test_exemplu.sv"
+`include "test_base.sv"
+`include "test_uart_config.sv"
 `include "design.sv"
 
 // Code your testbench here
@@ -87,17 +89,14 @@ module top();
     $display("[%0t] Reset released, uart_tx = %b, uart_rx = %b", $time, intf_uart.uart_tx, intf_uart.uart_rx);
   end
 
-  always @(intf_uart.uart_tx)
-    `uvm_info("SALUT_CHK", $sformatf("vif tx is %0b and dut tx is %0b", intf_uart.uart_tx, uart_tx), UVM_NONE)
-
-  
   initial begin
     //se salveaza instantele interfetelor in baza de date UVM
     uvm_config_db#(virtual apb_interface_dut)::set(null, "*", "apb_interface_dut", intf_apb);
     uvm_config_db#(virtual irq_interface_dut)::set(null, "*", "irq_interface_dut", intf_irq);
     uvm_config_db#(virtual uart_interface_dut)::set(null, "*", "uart_interface_dut", intf_uart);
     //se ruleaza testul dorit
-    run_test("test_exemplu");
+    // run_test("test_exemplu");
+    run_test("test_uart_config");
   end
 
   // se instantiaza DUT-ul, facandu-se legaturile intre semnalele din modulul de top si semnalele acestuia
