@@ -28,7 +28,7 @@ class uart_sequence extends uvm_sequence #(uart_item);
 
 
   virtual task post_body();
-    `uvm_info("UART_SEQ", $sformatf("sequence sent: %s", seq_item.sprint()), UVM_NONE)
+    `uvm_info("UART_SEQ", $sformatf("sequence sent:\n %s", seq_item.sprint()), UVM_NONE)
   endtask : post_body
 
 endclass : uart_sequence
