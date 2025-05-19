@@ -111,9 +111,9 @@ class secventa_read extends uvm_sequence #(tranzactie_apb);
       //se incepe crearea tranzactiei
       start_item(req);
       //se genereaza random valori in intervalele de interes pt fiecare apb 
-      assert (req.randomize() with {paddr inside {[0:4]};                                  
+      assert (req.randomize() with {paddr inside {[3:4]};                                  
                                     pwrite == 0; 
-                                    delay  inside {[0:5]};/*????*/ });
+                                    delay  inside {[0:5]}; });
       `ifdef DEBUG
       `uvm_info("SECVENTA_APB", $sformatf("La timpul %0t s-a generat elementul %0d cu informatiile:\n ", $time, i), UVM_LOW)
         req.afiseaza_informatia_tranzactiei();
@@ -125,3 +125,34 @@ class secventa_read extends uvm_sequence #(tranzactie_apb);
   endtask
 endclass
 `endif
+
+
+`ifndef __input_secventa_alternated
+`define __input_secventa_alternated
+class secventa_alternated extends uvm_sequence #(tranzactie_apb);
+   `uvm_object_utils(secventa_alternated)
+   function new(string name="secventa_alternated");
+    super.new(name);
+  endfunction 
+  function void post_randomize();
+  endfunction
+
+  virtual task body();
+    for (int i=0; i< 80; i++) begin
+      req = tranzactie_apb::type_id::create("req");
+      
+      start_item(req);
+
+      assert (req.randomize() with {paddr inside {[0:4]};
+                                    pdata  inside {[0:255]};    
+                                    delay  inside {[0:20]}; });
+      `ifdef DEBUG
+      `uvm_info("SECVENTA_APB", $sformatf("La timpul %0t s-a generat elementul %0d cu informatiile:\n ", $time, i), UVM_LOW)
+        req.afiseaza_informatia_tranzactiei();
+      `endif;
+      finish_item(req);
+    end
+  endtask
+endclass
+`endif
+
