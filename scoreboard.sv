@@ -52,15 +52,14 @@ class scoreboard extends uvm_scoreboard;
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
 
-    // Add initialization code here (e.g., variables, queues, etc.)
     p_uart_cvg = uart_coverage::type_id::create("p_uart_cvg", this);
 
     if (!uvm_config_db#(uart_config)::get(this, "", "uart_config", p_uart_cfg))
       `uvm_fatal("NOCFG", "Failed to get UART config from config DB")
 
-    fifo_wr_ptr = 0;  // starts at the beginning of the FIFO
-    fifo_rd_ptr = 0;  // (empty) also starts at the beginning
-    fifo_count = 0;  // No items in the FIFO at the start
+    fifo_wr_ptr = 0;
+    fifo_rd_ptr = 0;
+    fifo_count = 0;
 
     reg_data_tx = 0;
     reg_data_rx = 0;
@@ -69,61 +68,15 @@ class scoreboard extends uvm_scoreboard;
 
     rx_reg = 0;
     rx_valid = 0;
-
   endfunction : build_phase
 
   function void write_apb(input tranzactie_apb tranzactie_noua_apb);
-    `uvm_info("SCOREBOARD", $sformatf("S-a primit de la agentul apb tranzactia cu informatia:\n"),
-              UVM_LOW)
+    `uvm_info("SCOREBOARD", $sformatf("S-a primit de la agentul apb tranzactia cu informatia:\n"), UVM_LOW)
 
     tranzactie_noua_apb.afiseaza_informatia_tranzactiei();
     $display($sformatf("cand s-au primit date de la apb, enable a fost %d", enable));
 
     tranzactie_venita_de_la_apb = tranzactie_noua_apb.copy();
-
-    if (tranzactie_venita_de_la_apb.pwrite == 1) begin  // scriere
-      case (tranzactie_venita_de_la_apb.paddr)
-        0: begin
-          reg_uart_config = tranzactie_venita_de_la_apb.pdata;
-          p_uart_cfg.decode_uart_config(reg_uart_config);
-        end
-        2: reg_data_tx = tranzactie_venita_de_la_apb.pdata;
-        3: `uvm_info(get_full_name(), "REGISTRU READ_ONLY, nu se poate scrie", UVM_LOW)
-        4: `uvm_info(get_full_name(), "REGISTRU READ_ONLY, nu se poate scrie", UVM_LOW)
-        default: `uvm_info(get_full_name(), "Adresa incorecta", UVM_LOW)
-      endcase
-    end 
-    else begin  // citire
-      case (tranzactie_venita_de_la_apb.paddr)
-        0:
-        assert (reg_uart_config == tranzactie_venita_de_la_apb.pdata)
-        else
-          `uvm_error("SCB_APB_ERR", $sformatf(
-                     "Valoarea prezisa de DUT (apb uart config): %0h, valoarea din scoreboard (reg uart config): %0h",
-                     tranzactie_venita_de_la_apb.pdata,
-                     reg_uart_config
-                     ))
-        2: `uvm_info(get_full_name(), "REGISTRU WRITE_ONLY, nu se poate citi", UVM_LOW)
-        3:
-        assert (reg_data_rx == tranzactie_venita_de_la_apb.pdata)
-        else
-          `uvm_error("SCB_APB_ERR", $sformatf(
-                     "Valoarea prezisa de DUT (apb data): %0h, valoarea din scoreboard (reg data): %0h",
-                     tranzactie_venita_de_la_apb.pdata,
-                     reg_data_rx
-                     ))
-        4:
-        assert (reg_status == tranzactie_venita_de_la_apb.pdata)
-        else
-          `uvm_error("SCB_APB_ERR", $sformatf(
-                     "Valoarea prezisa de DUT (apb status): %0h, valoarea din scoreboard (reg status): %0h",
-                     tranzactie_venita_de_la_apb.pdata,
-                     reg_status
-                     ))
-        default: `uvm_info(get_full_name(), "Adresa incorecta", UVM_LOW)
-      endcase
-    end
-  endfunction : write_apb
 
     if (tranzactie_venita_de_la_apb.pwrite == 1) begin  // scriere
       case (tranzactie_venita_de_la_apb.paddr)
@@ -168,22 +121,17 @@ class scoreboard extends uvm_scoreboard;
     tranzactie_venita_de_la_irq = tranzactie_noua_irq.copy();
   endfunction : write_irq
 
-
   function void write_uart(input uart_item tranzactie_noua_uart);
-    `uvm_info("SCOREBOARD", $sformatf("S-a primit de la agentul uart tranzactia cu informatia:\n"),
-              UVM_LOW)
+    `uvm_info("SCOREBOARD", $sformatf("S-a primit de la agentul uart tranzactia cu informatia:\n"), UVM_LOW)
 
     tranzactie_noua_uart.afiseaza_informatia_tranzactiei();
     tranzactie_venita_de_la_uart = tranzactie_noua_uart.copy();
 
-    // Procesam tranzactia UART
     reg_data_tx = tranzactie_venita_de_la_uart.data;
 
-    //colectare coverage setari UART
     p_uart_cvg.frame_format_cp.sample(reg_uart_config[1:0], reg_uart_config[2], reg_uart_config[3],
                                       reg_uart_config[4]);
 
-    // Daca avem paritate activata si este para (reg_uart_config[2] = 0 && reg_uart_config[3] = 0)
     if (reg_uart_config[2] == 0 && reg_uart_config[3] == 0) begin
       if (^{tranzactie_venita_de_la_uart.data, tranzactie_venita_de_la_uart.parity} == 0)
         reg_status[3] = 0;
@@ -197,7 +145,6 @@ class scoreboard extends uvm_scoreboard;
       end
     end
 
-    // Daca paritatea e activata si trebuie sa fie impara (reg_uart_config[3] = 1)
     if (reg_uart_config[2] == 0 && reg_uart_config[3] == 1) begin
       if (^{tranzactie_venita_de_la_uart.data, tranzactie_venita_de_la_uart.parity} == 1)
         reg_status[3] = 0;
@@ -208,18 +155,6 @@ class scoreboard extends uvm_scoreboard;
                    ^tranzactie_venita_de_la_uart.data
                    ))
         reg_status[3] = 1;
-      end
-    end
-  endfunction : write_uart
-
-  /*  virtual function void check_phase (uvm_phase phase);
-   foreach(tranzactii_irq[i]) begin
-      //checker 1
-      if (tranzactii_irq[i].irq == 1) begin
-        if(tranzactii_irq[i].addr != tranzactii_apb[i].paddr)
-          `uvm_error("SCOREBOARD checker 1", $sformatf("IRQ asserted wrong, address on apb is %h and on irq is %h", tranzactii_apb[i].paddr, tranzactii_irq[i].addr))
-        else 
-          `uvm_info("SCOREBOARD checker 1", "IRQ ASSERTED: OK", UVM_LOW)
       end
     end
   endfunction : write_uart

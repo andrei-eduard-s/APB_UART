@@ -16,6 +16,8 @@ import uvm_pkg::*;
 `include "uart_interface_dut.sv"
 `include "test_exemplu.sv"
 `include "test_base.sv"
+`include "test_apb_write.sv"
+`include "test_wr_alternative.sv"
 `include "test_uart_config.sv"
 `include "design.sv"
 
@@ -96,7 +98,7 @@ module top();
     uvm_config_db#(virtual uart_interface_dut)::set(null, "*", "uart_interface_dut", intf_uart);
     //se ruleaza testul dorit
     // run_test("test_exemplu");
-    run_test("test_uart_config");
+    run_test("test_wr_alternative");
   end
 
   // se instantiaza DUT-ul, facandu-se legaturile intre semnalele din modulul de top si semnalele acestuia

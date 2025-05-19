@@ -85,6 +85,7 @@ class test_apb_write extends uvm_test;
     vif_uart_dut.uart_tx <= 1;
     vif_uart_dut.uart_rx <= 1;
     #100
+    $display("s-a terminat run_phase");
     phase.drop_objection(this);
   endtask : run_phase
    
