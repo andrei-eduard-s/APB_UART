@@ -20,6 +20,8 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
  
 
    // Internal definitions
+   
+    // Internal parameters
     localparam TX_IDLE   = 3'b000,
                TX_START  = 3'b001,
                TX_DATA   = 3'b010,
@@ -47,19 +49,22 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
     reg [15:0] baud_cnt, rx_baud_cnt;
     reg [3:0] rx_sample_cnt;
 
-    reg [7:0] reg_config, reg_status, reg_rx;
+    reg [7:0] reg_config;
+    reg [7:0] reg_rx;
     reg [7:0] fifo [0:FIFO_DEPTH-1];
     reg [3:0] wr_ptr, rd_ptr;
     reg [4:0] count;
 
-    wire full  = (count == FIFO_DEPTH);
-    wire empty = (count == 0);
+    reg rx_valid, rx_overrun, tx_error;
+
+    wire fifo_empty = (count == 0);
+    wire fifo_full  = (count == FIFO_DEPTH-1);
 
     wire [3:0] data_bits = (reg_config[1:0]==2'b00)?5:
                            (reg_config[1:0]==2'b01)?6:
                            (reg_config[1:0]==2'b10)?7:8;
 
-    // PREADY signal
+    // PREADY
     always @(posedge pclk or negedge preset_n)
         if (!preset_n) pready <= 1'b0;
         else           pready <= 1'b1;
@@ -67,27 +72,47 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
     // APB interface
     always @(posedge pclk or negedge preset_n) begin
         if (!preset_n) begin
-            reg_config <= 0; reg_status <= 0; reg_rx <= 0;
-            wr_ptr <= 0; rd_ptr <= 0; count <= 0;
-            prdata <= 0;
+            reg_config <= 8'h00;
+            reg_rx <= 8'h00;
+            prdata <= 8'h00;
+            rx_valid <= 1'b0;
+            rx_overrun <= 1'b0;
+            tx_error <= 1'b0;
+            wr_ptr <= 0;
+            rd_ptr <= 0;
+            count <= 0;
         end else if (psel && penable) begin
             if (pwrite) begin
-                case(paddr)
+                case (paddr)
                     ADDR_CONFIG: reg_config <= pwdata;
-                    ADDR_TX: if (!full) begin
-                        fifo[wr_ptr] <= pwdata;
-                        wr_ptr <= wr_ptr + 1;
-                        count  <= count + 1;
-                    end else reg_status[1] <= 1'b1;
-                    ADDR_RX: reg_rx <= pwdata;
+                    ADDR_TX: begin
+                        if (!fifo_full) begin
+                            fifo[wr_ptr] <= pwdata;
+                            wr_ptr <= wr_ptr + 1;
+                            count  <= count + 1;
+                        end
+                        // altfel ignorăm scrierea (poate aserta o eroare opțional)
+                    end
+                    default: ;
                 endcase
             end else begin
-                case(paddr)
+                case (paddr)
                     ADDR_CONFIG: prdata <= reg_config;
-                    ADDR_TX:     prdata <= {7'd0, full};
-                    ADDR_RX:     begin prdata <= reg_rx; reg_status[2] <= 1'b0; end
-                    ADDR_STATUS: prdata <= reg_status;
-                    default:     prdata <= 0;
+                    ADDR_TX:     prdata <= {7'd0, fifo_full};
+                    ADDR_RX: begin
+                        prdata <= reg_rx;
+                        rx_valid   <= 1'b0;
+                        rx_overrun <= 1'b0;
+                    end
+                    ADDR_STATUS: begin
+                        prdata[0] <= fifo_empty;   // TX_EMPTY
+                        prdata[1] <= rx_valid;     // RX_FULL
+                        prdata[2] <= rx_overrun;   // RX_OVERRUN
+                        prdata[3] <= tx_error;     // TX_ERROR
+                        prdata[4] <= fifo_full;    // TX_FULL
+                        prdata[7:5] <= 3'b000;
+                    end
+                    default: prdata <= 8'h00;
                 endcase
             end
         end
@@ -96,20 +121,25 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
     // TX logic
     always @(posedge pclk or negedge preset_n) begin
         if (!preset_n) begin
-            tx_state <= TX_IDLE; tx_bit_cnt <= 0; baud_cnt <= 0;
+            tx_state <= TX_IDLE;
+            baud_cnt <= 0;
+            tx_bit_cnt <= 0;
             uart_tx <= 1'b1;
         end else begin
             if (baud_cnt < BAUD_DIV-1)
                 baud_cnt <= baud_cnt + 1;
             else begin
                 baud_cnt <= 0;
-                case(tx_state)
+                case (tx_state)
                     TX_IDLE: begin
                         uart_tx <= 1'b1;
-                        if (!empty && rx_state==RX_IDLE) begin
+                        if (!fifo_empty && rx_state==RX_IDLE) begin
                             tx_shift_reg <= fifo[rd_ptr];
-                            rd_ptr <= rd_ptr + 1; count <= count - 1;
-                            tx_state <= TX_START; uart_tx <= 1'b0; tx_bit_cnt <= 0;
+                            rd_ptr <= rd_ptr + 1;
+                            count <= count - 1;
+                            tx_bit_cnt <= 0;
+                            uart_tx <= 1'b0;
+                            tx_state <= TX_START;
                         end
                     end
                     TX_START: tx_state <= TX_DATA;
@@ -120,8 +150,15 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
                         if (tx_bit_cnt == data_bits - 1)
                             tx_state <= reg_config[2] ? TX_PARITY : TX_STOP;
                     end
-                    TX_PARITY: tx_state <= TX_STOP;
-                    TX_STOP:   tx_state <= TX_IDLE;
+                    TX_PARITY: begin
+                        // nu se implementează verificare paritate, dar poate seta eroare
+                        tx_error <= 1'b0;
+                        tx_state <= TX_STOP;
+                    end
+                    TX_STOP: begin
+                        uart_tx <= 1'b1;
+                        tx_state <= TX_IDLE;
+                    end
                 endcase
             end
         end
@@ -130,24 +167,35 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
     // RX logic
     always @(posedge pclk or negedge preset_n) begin
         if (!preset_n) begin
-            rx_state <= RX_IDLE; rx_bit_cnt <= 0; rx_baud_cnt <= 0; rx_sample_cnt <= 0;
+            rx_state <= RX_IDLE;
+            rx_bit_cnt <= 0;
+            rx_baud_cnt <= 0;
+            rx_sample_cnt <= 0;
+            rx_valid <= 1'b0;
+            rx_overrun <= 1'b0;
         end else begin
-            case(rx_state)
+            case (rx_state)
                 RX_IDLE: begin
-                    if (uart_rx == 0 && tx_state == TX_IDLE && empty) begin
-                        rx_state <= RX_START; rx_sample_cnt <= 0;
+                    if (uart_rx == 0 && tx_state == TX_IDLE) begin
+                        rx_sample_cnt <= 0;
+                        rx_state <= RX_START;
                     end
                 end
                 RX_START: begin
                     rx_sample_cnt <= rx_sample_cnt + 1;
-                    if (rx_sample_cnt == (BAUD_DIV/2)) begin
+                    if (rx_sample_cnt == BAUD_DIV/2) begin
                         if (uart_rx == 0) begin
-                            rx_baud_cnt <= 0; rx_bit_cnt <= 0; rx_state <= RX_DATA;
-                        end else rx_state <= RX_IDLE;
+                            rx_baud_cnt <= 0;
+                            rx_bit_cnt <= 0;
+                            rx_state <= RX_DATA;
+                        end else begin
+                            rx_state <= RX_IDLE;
+                        end
                     end
                 end
                 RX_DATA: begin
-                    if (rx_baud_cnt < BAUD_DIV-1) rx_baud_cnt <= rx_baud_cnt + 1;
+                    if (rx_baud_cnt < BAUD_DIV - 1)
+                        rx_baud_cnt <= rx_baud_cnt + 1;
                     else begin
                         rx_baud_cnt <= 0;
                         rx_shift_reg <= {rx_shift_reg[6:0], uart_rx};
@@ -156,20 +204,27 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
                             rx_state <= reg_config[2] ? RX_PARITY : RX_STOP;
                     end
                 end
-                RX_PARITY: rx_state <= RX_STOP;
+                RX_PARITY: begin
+                    // Nu se verifică efectiv paritatea
+                    rx_state <= RX_STOP;
+                end
                 RX_STOP: begin
-                    if (rx_baud_cnt < BAUD_DIV-1) rx_baud_cnt <= rx_baud_cnt + 1;
+                    if (rx_baud_cnt < BAUD_DIV - 1)
+                        rx_baud_cnt <= rx_baud_cnt + 1;
                     else begin
                         rx_baud_cnt <= 0;
-                        if (uart_rx == 1) rx_state <= RX_SAVE;
-                        else rx_state <= RX_IDLE;
+                        if (uart_rx == 1)
+                            rx_state <= RX_SAVE;
+                        else
+                            rx_state <= RX_IDLE;
                     end
                 end
                 RX_SAVE: begin
-                    if (reg_status[2]) reg_status[3] <= 1'b1;
-                    else begin
+                    if (rx_valid) begin
+                        rx_overrun <= 1'b1;
+                    end else begin
                         reg_rx <= rx_shift_reg;
-                        reg_status[2] <= 1'b1;
+                        rx_valid <= 1'b1;
                     end
                     rx_state <= RX_IDLE;
                 end
@@ -177,24 +232,11 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
         end
     end
 
-    // Status update
-    always @(posedge pclk or negedge preset_n) begin
-        if (!preset_n) reg_status <= 8'b00000001;
-        else begin
-            reg_status[0] <= empty;
-            reg_status[1] <= full;
-        end
-    end
-
     // Interrupts
-    always @(posedge pclk or negedge preset_n) begin
-        if (!preset_n) int_o <= 3'b000;
-        else begin
-            int_o[0] <= reg_status[1];
-            int_o[1] <= reg_status[3];
-            int_o[2] <= reg_status[4];
-        end
+    always @(*) begin
+        int_o[0] = fifo_full;    // TX_FULL
+        int_o[1] = rx_overrun;   // RX_OVERRUN
+        int_o[2] = tx_error;     // TX_ERROR
     end
 
 endmodule
-
