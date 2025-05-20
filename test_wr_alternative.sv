@@ -16,8 +16,9 @@ class test_wr_alternative extends uvm_test;
 
   mediu_verificare mediu_de_verificare;
   
-  secventa_write apb_seq;
-  uart_sequence uart_seq;
+  secventa_write apb_seq_write;
+  secventa_read  apb_seq_read;
+  uart_sequence  uart_seq;
 
   virtual apb_interface_dut vif_apb_dut;
   virtual irq_interface_dut vif_irq_dut;
@@ -41,8 +42,11 @@ class test_wr_alternative extends uvm_test;
     if (!uvm_config_db#(virtual uart_interface_dut)::get(this, "", "uart_interface_dut", vif_uart_dut))
       `uvm_fatal("TEST", "Nu s-a putut obtine din baza de date UVM tipul de interfata virtuala uart_interface_dut pentru a crea vif_uart_dut")
 
-    apb_seq = secventa_write::type_id::create("apb_seq");
-    apb_seq.randomize();
+    apb_seq_write = secventa_write::type_id::create("apb_seq_write");
+    apb_seq_write.randomize();
+
+    apb_seq_read = secventa_read::type_id::create("apb_seq_read");
+    apb_seq_read.randomize();
 
     uart_seq = uart_sequence::type_id::create("uart_seq");
     uart_seq.randomize();  
@@ -58,11 +62,11 @@ class test_wr_alternative extends uvm_test;
     fork      
       begin 
       `ifdef DEBUG
-        $display("va incepe sa ruleze secventa: apb_seq pentru agentul activ agent_apb");
+        $display("va incepe sa ruleze secventa: apb_seq_write pentru agentul activ agent_apb");
       `endif;
-        apb_seq.start(mediu_de_verificare.agent_apb_din_mediu.sequencer_agent_apb_inst0);
+        apb_seq_write.start(mediu_de_verificare.agent_apb_din_mediu.sequencer_agent_apb_inst0);
       `ifdef DEBUG
-        $display("s-a terminat de rulat secventa pentru agentul activ agent_apb");
+        $display("s-a terminat de rulat secventa de scriere pentru agentul activ agent_apb");
       `endif;
       end
       begin 
@@ -76,6 +80,30 @@ class test_wr_alternative extends uvm_test;
       end
 
     join
+
+    //in bucla fork join se pot porni in paralel secventele mediului de verificare
+    fork      
+      begin 
+      `ifdef DEBUG
+        $display("va incepe sa ruleze secventa: apb_seq_read pentru agentul activ agent_apb");
+      `endif;
+        apb_seq_read.start(mediu_de_verificare.agent_apb_din_mediu.sequencer_agent_apb_inst0);
+      `ifdef DEBUG
+        $display("s-a terminat de rulat secventa de citire pentru agentul activ agent_apb");
+      `endif;
+      end
+      begin 
+      `ifdef DEBUG
+        $display("va incepe sa ruleze secventa: uart_seq pentru agentul activ uart_agent");
+      `endif;
+        uart_seq.start(mediu_de_verificare.agent_uart_din_mediu.sequencer);
+      `ifdef DEBUG
+        $display("s-a terminat de rulat secventa pentru agentul activ uart_agent");
+      `endif;
+      end
+
+    join
+
     //dupa ce s-au terminat secventele care trimit stimuli DUT-ului, toate semnalele de intrare se pun in valoarea de reset
     @(posedge vif_apb_dut.pclk);
     vif_apb_dut.psel     <= 0;
