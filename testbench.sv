@@ -99,7 +99,7 @@ module top();
     uvm_config_db#(virtual uart_interface_dut)::set(null, "*", "uart_interface_dut", intf_uart);
     //se ruleaza testul dorit
     // run_test("test_exemplu");
-    run_test("test_random");
+    run_test("test_apb_write");
   end
 
   // se instantiaza DUT-ul, facandu-se legaturile intre semnalele din modulul de top si semnalele acestuia

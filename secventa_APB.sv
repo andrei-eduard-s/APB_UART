@@ -70,7 +70,7 @@ class secventa_write extends uvm_sequence #(tranzactie_apb);
   endfunction
 
   virtual task body();
-    for (int i=0; i< 20; i++) begin
+    for (int i=0; i< 100; i++) begin
       //se creaza o tranzactie folosindu-se cuvantul cheie "req"
       req = tranzactie_apb::type_id::create("req");
       
