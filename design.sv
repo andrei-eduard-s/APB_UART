@@ -17,9 +17,6 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
     
     // Interfata de intreruperi (3 iesiri pentru diferite conditii)
     output reg  [2:0]  int_o;       // [0]: TX FIFO plin, [1]: RX overrun, [2]: TX error
- 
-
-   // Internal definitions
    
     // Internal parameters
     localparam TX_IDLE   = 3'b000,
@@ -91,7 +88,6 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
                             wr_ptr <= wr_ptr + 1;
                             count  <= count + 1;
                         end
-                        // altfel ignorăm scrierea (poate aserta o eroare opțional)
                     end
                     default: ;
                 endcase
@@ -151,7 +147,6 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
                             tx_state <= reg_config[2] ? TX_PARITY : TX_STOP;
                     end
                     TX_PARITY: begin
-                        // nu se implementează verificare paritate, dar poate seta eroare
                         tx_error <= 1'b0;
                         tx_state <= TX_STOP;
                     end
@@ -205,7 +200,6 @@ module uart_apb_dut(pclk, preset_n, paddr, psel, penable, pwrite, pwdata, prdata
                     end
                 end
                 RX_PARITY: begin
-                    // Nu se verifică efectiv paritatea
                     rx_state <= RX_STOP;
                 end
                 RX_STOP: begin
